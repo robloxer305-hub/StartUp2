@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Startup - Buy & Sell (Demo)</title>
+<style>
+  * { box-sizing: border-box; }
+  body{
+    margin:0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background:#f5f5f5;
+    color:#333;
+  }
+
+  /* Header */
+  header{
+    background:#f5771f;
+    padding:14px 18px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:white;
+    flex-wrap:wrap;
+  }
+  header h1{ margin:0; font-weight:700; font-size:1.6rem; user-select:none; cursor:default; }
+
+  #searchWrapper{ position:relative; flex-grow:1; min-width:180px; }
+  #searchInput{
+    width:100%;
+    padding:8px 12px;
+    border:none;
+    border-radius:4px;
+    font-size:1rem;
+  }
+  #autocompleteList{
+    position:absolute; top:100%; left:0; right:0; background:white; color:#333;
+    border:1px solid #ccc; border-top:none; max-height:160px; overflow-y:auto; z-index:1200;
+    border-bottom-left-radius:6px; border-bottom-right-radius:6px;
+  }
+  #autocompleteList div{ padding:8px 12px; cursor:pointer; user-select:none; }
+  #autocompleteList div:hover{ background:#f5771f; color:#fff; }
+
+  button.header-btn{
+    background:white; color:#f5771f; border:none; font-weight:700; font-size:0.95rem;
+    padding:8px 14px; border-radius:5px; cursor:pointer;
+  }
+  button.header-btn:hover{ background:#ffd6a1; }
+
+  #loggedInUser{ margin-left:auto; display:flex; gap:8px; align-items:center; font-weight:600; cursor:pointer; user-select:none; }
+  #loggedInUser .userIcon, #loggedInUser img.profilePic{
+    font-size:1.5rem;
+    border-radius:50%;
+    width:32px;
+    height:32px;
+    object-fit:cover;
+    background:#fff;
+    color:#f5771f;
+  }
+  #logoutBtn{ background:#fff;color:#f5771f;border:none;padding:6px 10px;border-radius:4px;cursor:pointer; }
+  #logoutBtn:hover{ background:#ffd6a1; }
+
+  main{ max-width:1000px; margin:22px auto; padding:0 16px; }
+
+     h2{ color:#f5771f; margin-bottom:10px; }
+   
+   .section-header {
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     margin-bottom: 16px;
+     flex-wrap: wrap;
+     gap: 12px;
+   }
+   
+   .sort-controls {
+     display: flex;
+     align-items: center;
+     gap: 8px;
+   }
+   
+   .sort-controls label {
+     font-weight: 600;
+     color: #495057;
+     font-size: 0.9rem;
+   }
+   
+   .sort-controls select {
+     padding: 6px 10px;
+     border: 1px solid #dee2e6;
+     border-radius: 6px;
+     font-size: 0.9rem;
+     background: white;
+     cursor: pointer;
+   }
+   
+   .sort-controls select:focus {
+     outline: none;
+     border-color: #f5771f;
+   }
+
+  /* Product list: horizontal scroll */
+  #productList{
+    display:flex;
+    gap:16px;
+    overflow-x:auto;
+    padding-bottom:10px;
+    scroll-behavior:smooth;
+  }
+  #productList::-webkit-scrollbar{ height:10px; }
+  #productList::-webkit-scrollbar-thumb{ background:#f5771f; border-radius:6px; }
+  #productList::-webkit-scrollbar-track{ background:#f1f1f1; border-radius:6px; }
+
+  /* Product card */
+  .product-card{
+    flex:0 0 260px;
+    background:white;
+    border-radius:8px;
+    box-shadow:0 6px 16px rgba(0,0,0,0.08);
+    display:flex; flex-direction:column; cursor:pointer;
+    min-height:320px; overflow:hidden;
+  }
+  .product-thumb{
+    width:100%; height:150px; object-fit:cover; background:#eee;
+  }
+  .product-body{ padding:12px; display:flex; flex-direction:column; gap:6px; flex:1; }
+  .product-title{ display:flex; align-items:center; gap:8px; font-weight:700; color:#f5771f; }
+  .product-category{ font-size:0.9rem; color:#777; }
+  .product-desc{ font-size:0.90rem; color:#555; margin-top:6px; flex:1; overflow:hidden; }
+  .product-price{ font-weight:800; font-size:1.05rem; margin-top:8px; }
+
+  /* Modal base */
+  .modalOverlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55);
+    justify-content:center; align-items:center; z-index:1500; padding:20px;
+  }
+  .modalContent{
+    background:white; border-radius:10px; width:820px; max-width:100%; max-height:90vh;
+    overflow:auto; padding:18px 20px; position:relative;
+  }
+  .closeModalBtn{ position:absolute; right:14px; top:8px; font-size:22px; color:#999; cursor:pointer; }
+  .closeModalBtn:hover{ color:#f5771f; }
+
+  /* Add product form grid */
+  .form-grid{ display:grid; gap:10px; grid-template-columns:1fr 1fr; }
+  .form-row-full{ grid-column:1/-1; }
+
+  label{ display:block; margin-bottom:6px; font-weight:600; }
+  input[type="text"], input[type="email"], input[type="number"], textarea, select{
+    width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px;
+    font-size:0.95rem;
+  }
+  textarea{ resize:vertical; min-height:100px; }
+
+  .small-note{ font-size:0.85rem; color:#666; margin-top:-6px; margin-bottom:8px; }
+
+  .btn{ background:#f5771f; color:white; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; font-weight:700; }
+  .btn:hover{ background:#d96e13; }
+
+  .img-preview-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+
+  .img-preview{
+    width:84px; height:64px; object-fit:cover; border-radius:6px; background:#eee;
+    border:1px solid #ddd;
+  }
+
+  /* Product detail layout */
+  .detail-grid{ display:grid; grid-template-columns: 1fr 360px; gap:18px; align-items:start; }
+  .detail-main-img{ width:100%; height:420px; object-fit:cover; border-radius:8px; background:#eee; }
+  .detail-thumbs{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .detail-thumb{ width:72px; height:56px; object-fit:cover; border-radius:6px; cursor:pointer; border:2px solid transparent; }
+  .detail-thumb.active{ border-color:#f5771f; }
+
+  .seller-card{ background:#fff6ee; border:1px solid #ffd9bf; padding:12px; border-radius:8px; }
+
+  /* Profile modal styles */
+  #modalProfile .modalContent{
+    max-width:700px;
+  }
+  #profilePicPreview{
+    width:120px; height:120px; border-radius:50%; object-fit:cover; border:2px solid #f5771f; margin-bottom:12px;
+    background:#eee;
+  }
+  #profileInfo label{ font-weight:700; margin-top:12px; display:block; }
+  #profileInfo input[type="text"]{
+    width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:6px; font-size:1rem;
+  }
+  #userProductsList{
+    margin-top:20px;
+  }
+  #userProductsList h3{
+    margin-bottom:10px;
+    color:#f5771f;
+  }
+  .user-product-item{
+    background:#fff;
+    border-radius:8px;
+    padding:12px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.07);
+    margin-bottom:10px;
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+  .user-product-thumb{
+    width:72px; height:56px; object-fit:cover; border-radius:6px; background:#eee;
+  }
+  .user-product-info{
+    flex-grow:1;
+  }
+  .user-product-name{
+    font-weight:700; color:#f5771f; margin:0 0 4px 0;
+  }
+  .user-product-category{
+    font-size:0.9rem; color:#555; margin:0 0 8px 0;
+  }
+  .user-product-buttons{
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .user-product-buttons button{
+    font-size:0.85rem;
+    padding:6px 10px;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    font-weight:700;
+  }
+  .btn-edit{
+    background:#f5771f; color:#fff;
+  }
+  .btn-edit:hover{
+    background:#d96e13;
+  }
+  .btn-delete{
+    background:#c82333; color:#fff;
+  }
+  .btn-delete:hover{
+    background:#a71d2a;
+  }
+
+  /* Toast notifications */
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 2000;
+    min-width: 300px;
+    animation: slideInRight 0.3s ease;
+  }
+  
+  .toast-success { border-left: 4px solid #28a745; }
+  .toast-error { border-left: 4px solid #dc3545; }
+  .toast-warning { border-left: 4px solid #ffc107; }
+  .toast-info { border-left: 4px solid #17a2b8; }
+  
+  .toast-icon { font-size: 18px; }
+  .toast-message { flex: 1; }
+  .toast-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  @keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  
+  /* Product card enhancements */
+  .product-card-header {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 12px 0;
+  }
+  
+  .status-badge {
+    background: #f5771f;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .status-sold { background: #dc3545; }
+  .status-reserved { background: #ffc107; color: #333; }
+  .status-expired { background: #6c757d; }
+  
+  .favorite-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: background 0.2s;
+  }
+  
+  .favorite-btn:hover {
+    background: rgba(245, 119, 31, 0.1);
+  }
+  
+  .favorite-btn.favorited {
+    animation: heartBeat 0.3s ease;
+  }
+  
+  @keyframes heartBeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+  }
+  
+     .product-meta {
+     margin-top: 8px;
+     color: #666;
+     font-size: 0.8rem;
+   }
+   
+   /* Product stats and reactions */
+   .product-stats {
+     display: flex;
+     gap: 12px;
+     margin-bottom: 6px;
+   }
+   
+   .stat-item {
+     font-size: 0.75rem;
+     color: #666;
+     display: flex;
+     align-items: center;
+     gap: 2px;
+   }
+   
+   .product-reactions {
+     display: flex;
+     gap: 8px;
+     margin: 8px 0;
+   }
+   
+   .reaction-btn {
+     background: #f8f9fa;
+     border: 1px solid #dee2e6;
+     border-radius: 20px;
+     padding: 4px 12px;
+     font-size: 0.8rem;
+     cursor: pointer;
+     transition: all 0.2s ease;
+     display: flex;
+     align-items: center;
+     gap: 4px;
+   }
+   
+   .reaction-btn:hover {
+     background: #e9ecef;
+     border-color: #adb5bd;
+   }
+   
+   .reaction-btn.active {
+     background: #f5771f;
+     color: white;
+     border-color: #f5771f;
+   }
+   
+   .like-btn.active {
+     background: #28a745;
+     border-color: #28a745;
+   }
+   
+   .dislike-btn.active {
+     background: #dc3545;
+     border-color: #dc3545;
+   }
+   
+   /* Product detail stats and reactions */
+   .product-stats-detail {
+     background: #f8f9fa;
+     border-radius: 8px;
+     padding: 12px;
+     margin: 16px 0;
+   }
+   
+   .stat-item-detail {
+     display: flex;
+     align-items: center;
+     gap: 8px;
+     margin-bottom: 8px;
+   }
+   
+   .stat-item-detail:last-child {
+     margin-bottom: 0;
+   }
+   
+   .stat-icon {
+     font-size: 1.2rem;
+   }
+   
+   .stat-label {
+     font-weight: 600;
+     color: #495057;
+     min-width: 60px;
+   }
+   
+   .stat-value {
+     font-weight: 700;
+     color: #f5771f;
+   }
+   
+   .product-reactions-detail {
+     display: flex;
+     gap: 12px;
+     margin: 16px 0;
+   }
+   
+   .reaction-btn-detail {
+     background: #f8f9fa;
+     border: 2px solid #dee2e6;
+     border-radius: 25px;
+     padding: 8px 16px;
+     font-size: 0.9rem;
+     font-weight: 600;
+     cursor: pointer;
+     transition: all 0.2s ease;
+     display: flex;
+     align-items: center;
+     gap: 6px;
+     flex: 1;
+     justify-content: center;
+   }
+   
+   .reaction-btn-detail:hover {
+     background: #e9ecef;
+     border-color: #adb5bd;
+   }
+   
+   .reaction-btn-detail.active {
+     background: #f5771f;
+     color: white;
+     border-color: #f5771f;
+   }
+   
+   .like-btn-detail.active {
+     background: #28a745;
+     border-color: #28a745;
+   }
+   
+   .dislike-btn-detail.active {
+     background: #dc3545;
+     border-color: #dc3545;
+   }
+  
+  /* Enhanced responsive design */
+  @media (max-width:900px){
+    .detail-grid{ grid-template-columns: 1fr; }
+    .detail-main-img{ height:260px; }
+    .form-grid{ grid-template-columns: 1fr; }
+  }
+  
+  @media (max-width: 768px) {
+    .product-card { flex: 0 0 200px; }
+    .toast { min-width: 280px; right: 10px; }
+  }
+  
+  @media (max-width: 480px) {
+    header { padding: 10px; }
+    .modalContent { width: 95vw; padding: 15px; }
+    .product-card { flex: 0 0 180px; }
+    .toast { min-width: 250px; right: 5px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Startup</h1>
+
+    <div id="searchWrapper">
+      <input id="searchInput" autocomplete="off" placeholder="Search by category (e.g. Electronics, Furniture)" />
+      <div id="autocompleteList"></div>
+    </div>
+
+    <button id="addProductBtn" class="header-btn">Add Product</button>
+    <button id="loginBtn" class="header-btn">Login</button>
+    <button id="signupBtn" class="header-btn">Sign/Up</button>
+
+    <div id="loggedInUser" style="display:none;" title="Click to view your profile">
+      <img src="" alt="User profile picture" class="profilePic" style="display:none;">
+      <span class="userIcon" style="display:none;">👤</span>
+      <span id="userNameDisplay"></span>
+      <button id="logoutBtn" title="Logout">Logout</button>
+    </div>
+  </header>
+
+     <main>
+     <section>
+       <div class="section-header">
+         <h2>Products for Sale</h2>
+         <div class="sort-controls">
+           <label for="sortSelect">Sort by:</label>
+           <select id="sortSelect">
+             <option value="date">Latest</option>
+             <option value="views">Most Viewed</option>
+             <option value="likes">Most Liked</option>
+             <option value="popularity">Popularity Score</option>
+           </select>
+         </div>
+       </div>
+       <div id="productList" aria-live="polite"><p style="padding:12px;color:#666">No products found.</p></div>
+     </section>
+   </main>
+
+  <!-- Add/Edit Product Modal -->
+  <div id="modalAddProduct" class="modalOverlay" aria-hidden="true">
+    <div class="modalContent" role="dialog" aria-modal="true" aria-labelledby="addProductTitle">
+      <span class="closeModalBtn" data-close="modalAddProduct" aria-label="Close">&times;</span>
+      <h2 id="addProductTitle">Sell Your Product</h2>
+      <form id="uploadForm">
+        <div class="form-grid">
+          <div>
+            <label for="productName">Product Title</label>
+            <input id="productName" name="productName" type="text" placeholder="e.g. iPhone 12 - 128GB" required />
+          </div>
+
+          <div>
+            <label for="category">Category</label>
+            <select id="category" name="category" required>
+              <option value="" disabled selected>Select category</option>
+              <option>Electronics</option>
+              <option>Furniture</option>
+              <option>Clothing</option>
+              <option>Vehicles</option>
+              <option>Books</option>
+              <option>Others</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="subcategory">Subcategory</label>
+            <select id="subcategory" name="subcategory">
+              <option value="" disabled selected>Select subcategory</option>
+              <option value="">No subcategory</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="price">Price (PKR)</label>
+            <input id="price" name="price" type="number" min="0" placeholder="e.g. 35000" required />
+          </div>
+
+          <div>
+            <label for="contactNo">Seller Contact No (optional)</label>
+            <input id="contactNo" name="contactNo" type="text" placeholder="e.g. +92xxxxxxxxxx" />
+          </div>
+
+          <div class="form-row-full">
+            <label for="sellerEmail">Seller Email</label>
+            <input id="sellerEmail" name="sellerEmail" type="email" placeholder="seller@example.com" readonly />
+          </div>
+
+          <div class="form-row-full">
+            <label for="description">Product Description</label>
+            <textarea id="description" name="description" placeholder="Describe your item, condition, etc." required></textarea>
+          </div>
+
+          <div>
+            <label for="thumbnail">Thumbnail (single)</label>
+            <input id="thumbnail" name="thumbnail" type="file" accept="image/*" />
+            <div id="thumbPreview" class="img-preview-row"></div>
+            <div class="small-note">Recommended: square image for best fit.</div>
+          </div>
+
+          <div>
+            <label for="photos">Photos (multiple)</label>
+            <input id="photos" name="photos" type="file" accept="image/*" multiple />
+            <div id="photosPreview" class="img-preview-row"></div>
+            <div class="small-note">You can upload multiple photos to show more details.</div>
+          </div>
+
+          <div class="form-row-full">
+            <button class="btn" type="submit">Add Product</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Product Detail Modal -->
+  <div id="modalProductDetail" class="modalOverlay" aria-hidden="true">
+    <div class="modalContent" role="dialog" aria-modal="true" aria-labelledby="productDetailTitle">
+      <span class="closeModalBtn" data-close="modalProductDetail" aria-label="Close">&times;</span>
+      <div id="productDetailInner"></div>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="modalLogin" class="modalOverlay" aria-hidden="true">
+    <div class="modalContent" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <span class="closeModalBtn" data-close="modalLogin" aria-label="Close">&times;</span>
+      <h2 id="loginTitle">Login</h2>
+      <form id="loginForm">
+        <label>Email</label>
+        <input id="loginEmail" type="email" required autocomplete="username" />
+        <label>Password</label>
+        <input id="loginPassword" type="password" required autocomplete="current-password" />
+        <div style="margin-top:10px;"><button class="btn" type="submit">Login</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Signup Modal -->
+  <div id="modalSignup" class="modalOverlay" aria-hidden="true">
+    <div class="modalContent" role="dialog" aria-modal="true" aria-labelledby="signupTitle">
+      <span class="closeModalBtn" data-close="modalSignup" aria-label="Close">&times;</span>
+      <h2 id="signupTitle">Sign/Up</h2>
+      <form id="signupForm" enctype="multipart/form-data" autocomplete="off">
+        <label>Full Name</label>
+        <input id="signupName" type="text" required autocomplete="name" />
+        <label>Email</label>
+        <input id="signupEmail" type="email" required autocomplete="email" />
+        <label>Password</label>
+        <input id="signupPassword" type="password" required autocomplete="new-password" />
+        <label>Profile Picture (optional)</label>
+        <input id="signupProfilePic" type="file" accept="image/*" />
+        <div class="img-preview-row" id="signupProfilePreview"></div>
+        <div style="margin-top:10px;"><button class="btn" type="submit">Sign/Up</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div id="modalProfile" class="modalOverlay" aria-hidden="true">
+    <div class="modalContent" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+      <span class="closeModalBtn" data-close="modalProfile" aria-label="Close">&times;</span>
+      <h2 id="profileTitle">Your Profile</h2>
+      <div id="profileContent">
+        <img src="" alt="Your profile picture" id="profilePicPreview" />
+        <label for="profilePicInput" style="cursor:pointer; color:#f5771f; font-weight:700; margin-bottom:12px; display:inline-block;">
+          Change Profile Picture
+        </label>
+        <input id="profilePicInput" type="file" accept="image/*" style="display:none;" />
+
+        <div id="profileInfo">
+          <label>Name</label>
+          <input id="profileNameInput" type="text" disabled />
+          <label>Email</label>
+          <input id="profileEmailInput" type="email" disabled />
+          <label>Phone Number (optional)</label>
+          <input id="profilePhoneInput" type="text" placeholder="Add or update your phone number" />
+          <button id="saveProfileBtn" class="btn" style="margin-top:12px;">Save Profile Info</button>
+        </div>
+
+        <section id="userProductsList">
+          <h3>Your Listed Products</h3>
+          <div id="userProductsContainer">
+            <!-- User products with edit/delete buttons go here -->
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* -------------------------
+   In-memory data & helpers
+   ------------------------- */
+const users = [];               // {name,email,password,profilePicUrl,phone?,rating,joinDate}
+let currentUser = null;         // points to user object
+const products = [];            // {id,name,category,price,contactNo?,sellerEmail,description,thumbnail,photos,ownerEmail,status,createdDate,lastUpdated,views,likes,dislikes}
+const reviews = [];             // {productId,userId,rating,comment,date}
+const favorites = new Map();    // userId -> Set of productIds
+const productInteractions = new Map(); // userId -> Map of productId -> {liked: boolean, disliked: boolean}
+const categories = {
+  Electronics: ['Phones', 'Laptops', 'Gaming', 'Audio', 'Cameras'],
+  Furniture: ['Living Room', 'Bedroom', 'Kitchen', 'Office', 'Garden'],
+  Clothing: ['Men', 'Women', 'Kids', 'Accessories', 'Shoes'],
+  Vehicles: ['Cars', 'Motorcycles', 'Bikes', 'Parts', 'Commercial'],
+  Books: ['Fiction', 'Non-Fiction', 'Academic', 'Children', 'Magazines'],
+  Others: ['Sports', 'Toys', 'Collectibles', 'Art', 'Tools']
+};
+
+/* categories for autocomplete - using the enhanced categories object above */
+
+/* simple id generator */
+function genId(){ return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+/* localStorage helpers */
+function saveToStorage() {
+  try {
+    localStorage.setItem('startup_users', JSON.stringify(users));
+    localStorage.setItem('startup_products', JSON.stringify(products));
+    localStorage.setItem('startup_reviews', JSON.stringify(reviews));
+    localStorage.setItem('startup_favorites', JSON.stringify(Array.from(favorites.entries())));
+    localStorage.setItem('startup_interactions', JSON.stringify(Array.from(productInteractions.entries())));
+    
+    // Save current user session
+    if (currentUser) {
+      localStorage.setItem('startup_currentUser', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('startup_currentUser');
+    }
+  } catch (e) {
+    console.warn('Failed to save to localStorage:', e);
+  }
+}
+
+function loadFromStorage() {
+  try {
+    const savedUsers = localStorage.getItem('startup_users');
+    const savedProducts = localStorage.getItem('startup_products');
+    const savedReviews = localStorage.getItem('startup_reviews');
+    const savedFavorites = localStorage.getItem('startup_favorites');
+    const savedInteractions = localStorage.getItem('startup_interactions');
+    const savedCurrentUser = localStorage.getItem('startup_currentUser');
+    
+    if (savedUsers) users.push(...JSON.parse(savedUsers));
+    if (savedProducts) products.push(...JSON.parse(savedProducts));
+    if (savedReviews) reviews.push(...JSON.parse(savedReviews));
+    if (savedFavorites) {
+      const favoritesArray = JSON.parse(savedFavorites);
+      favoritesArray.forEach(([userId, productIds]) => {
+        favorites.set(userId, new Set(productIds));
+      });
+    }
+    if (savedInteractions) {
+      const interactionsArray = JSON.parse(savedInteractions);
+      interactionsArray.forEach(([userId, productMap]) => {
+        productInteractions.set(userId, new Map(Object.entries(productMap)));
+      });
+    }
+    
+    // Restore current user session if it exists
+    if (savedCurrentUser) {
+      try {
+        const userData = JSON.parse(savedCurrentUser);
+        // Verify the user still exists in our users array
+        const existingUser = users.find(u => u.email === userData.email);
+        if (existingUser) {
+          currentUser = existingUser;
+        }
+      } catch (e) {
+        console.warn('Failed to restore user session:', e);
+        localStorage.removeItem('startup_currentUser');
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load from localStorage:', e);
+  }
+}
+
+/* Toast notification system */
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `
+    <span class="toast-icon">${getToastIcon(type)}</span>
+    <span class="toast-message">${message}</span>
+    <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // Auto-remove after 4 seconds
+  setTimeout(() => {
+    if (toast.parentElement) toast.remove();
+  }, 4000);
+}
+
+function getToastIcon(type) {
+  switch(type) {
+    case 'success': return '✅';
+    case 'error': return '❌';
+    case 'warning': return '⚠️';
+    default: return 'ℹ️';
+  }
+}
+
+/* Escape html for safe output */
+function escapeHtml(text) {
+  return text.replace(/[&<>"']/g, function(m) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+  });
+}
+
+/* Truncate long string */
+function truncate(str, n) {
+  return str.length > n ? str.slice(0, n-1) + '…' : str;
+}
+
+/* -------------------------
+   DOM refs
+   ------------------------- */
+const productList = document.getElementById('productList');
+const searchInput = document.getElementById('searchInput');
+const autocompleteList = document.getElementById('autocompleteList');
+const addProductBtn = document.getElementById('addProductBtn');
+
+const modalAddProduct = document.getElementById('modalAddProduct');
+const uploadForm = document.getElementById('uploadForm');
+const thumbnailInput = document.getElementById('thumbnail');
+const photosInput = document.getElementById('photos');
+const thumbPreview = document.getElementById('thumbPreview');
+const photosPreview = document.getElementById('photosPreview');
+const sellerEmailInput = document.getElementById('sellerEmail');
+const categorySelect = document.getElementById('category');
+const subcategorySelect = document.getElementById('subcategory');
+
+const modalProductDetail = document.getElementById('modalProductDetail');
+const productDetailInner = document.getElementById('productDetailInner');
+
+const loginBtn = document.getElementById('loginBtn');
+const signupBtn = document.getElementById('signupBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+
+const modalLogin = document.getElementById('modalLogin');
+const loginForm = document.getElementById('loginForm');
+
+const modalSignup = document.getElementById('modalSignup');
+const signupForm = document.getElementById('signupForm');
+const signupProfilePicInput = document.getElementById('signupProfilePic');
+const signupProfilePreview = document.getElementById('signupProfilePreview');
+
+const loggedInUserDiv = document.getElementById('loggedInUser');
+const userNameDisplay = document.getElementById('userNameDisplay');
+const profilePicImg = loggedInUserDiv.querySelector('img.profilePic');
+const userIconSpan = loggedInUserDiv.querySelector('span.userIcon');
+
+const modalProfile = document.getElementById('modalProfile');
+const profilePicPreview = document.getElementById('profilePicPreview');
+const profilePicInput = document.getElementById('profilePicInput');
+const profileNameInput = document.getElementById('profileNameInput');
+const profileEmailInput = document.getElementById('profileEmailInput');
+const profilePhoneInput = document.getElementById('profilePhoneInput');
+const saveProfileBtn = document.getElementById('saveProfileBtn');
+const userProductsContainer = document.getElementById('userProductsContainer');
+
+/* -------------------------
+   Modal helpers
+   ------------------------- */
+function openModal(modal){
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden','false');
+}
+function closeModal(modal){
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden','true');
+}
+document.querySelectorAll('.closeModalBtn').forEach(btn=>{
+  btn.addEventListener('click', ()=> {
+    const modalId = btn.getAttribute('data-close');
+    if(modalId){
+      closeModal(document.getElementById(modalId));
+    }
+  });
+});
+window.addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){
+    document.querySelectorAll('.modalOverlay').forEach(m=>{
+      if(m.style.display === 'flex') closeModal(m);
+    });
+  }
+});
+
+/* -------------------------
+   Render products horizontally
+   ------------------------- */
+function renderProducts(){
+  productList.innerHTML = '';
+  const filtered = advancedSearch();
+  
+  if(filtered.length === 0){
+    productList.innerHTML = '<p style="padding:12px;color:#666">No products found.</p>';
+    return;
+  }
+  
+  filtered.forEach(p=>{
+    const card = document.createElement('button');
+    card.className = 'product-card';
+    card.setAttribute('aria-pressed','false');
+    card.title = p.name;
+    
+    const isFavorite = currentUser && favorites.get(currentUser.email)?.has(p.id);
+    const statusBadge = p.status && p.status !== 'Available' ? 
+      `<span class="status-badge status-${p.status.toLowerCase()}">${p.status}</span>` : '';
+
+    card.innerHTML = `
+             <div class="product-card-header">
+         ${statusBadge}
+         <div class="product-actions">
+           <button class="favorite-btn ${isFavorite ? 'favorited' : ''}" 
+                   onclick="event.stopPropagation(); toggleFavorite('${p.id}')" 
+                   title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}">
+             ${isFavorite ? '❤️' : '🤍'}
+           </button>
+         </div>
+       </div>
+      <img src="${p.thumbnail || ''}" alt="Thumbnail for ${escapeHtml(p.name)}" class="product-thumb" />
+      <div class="product-body">
+        <div class="product-title">${getCategoryIcon(p.category)} ${escapeHtml(p.name)}</div>
+                 <div class="product-category">${escapeHtml(p.category)}${p.subcategory ? ` > ${escapeHtml(p.subcategory)}` : ''}</div>
+         <div class="product-desc">${truncate(escapeHtml(p.description), 70)}</div>
+         
+         <div class="product-reactions">
+           <button class="reaction-btn like-btn ${getProductReaction(p.id).liked ? 'active' : ''}" 
+                   onclick="event.stopPropagation(); handleProductReaction('${p.id}', 'like')" 
+                   title="Like this product">
+             👍 ${p.likes || 0}
+           </button>
+           <button class="reaction-btn dislike-btn ${getProductReaction(p.id).disliked ? 'active' : ''}" 
+                   onclick="event.stopPropagation(); handleProductReaction('${p.id}', 'dislike')" 
+                   title="Dislike this product">
+             👎 ${p.dislikes || 0}
+           </button>
+         </div>
+                 <div class="product-price">₨${Number(p.price).toLocaleString()}</div>
+         <div class="product-meta">
+           <div class="product-stats">
+             <span class="stat-item" title="Views">👁️ ${p.views || 0}</span>
+             <span class="stat-item" title="Likes">👍 ${p.likes || 0}</span>
+             <span class="stat-item" title="Dislikes">👎 ${p.dislikes || 0}</span>
+           </div>
+           <small>${p.createdDate ? new Date(p.createdDate).toLocaleDateString() : 'Recently'}</small>
+         </div>
+      </div>
+    `;
+    
+    card.addEventListener('click', ()=>openProductDetail(p.id));
+    card.addEventListener('keydown', e=>{
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openProductDetail(p.id);
+      }
+    });
+    productList.appendChild(card);
+  });
+}
+
+/* -------------------------
+   Product Detail modal
+   ------------------------- */
+function openProductDetail(productId){
+  const p = products.find(x => x.id === productId);
+  if (!p) return;
+  
+  // Increment view count
+  incrementViews(productId);
+
+  const photos = p.photos && p.photos.length ? p.photos : [];
+  let thumbsHtml = '';
+  if (photos.length){
+    thumbsHtml = photos.map((ph,i)=>`<img src="${ph}" alt="Photo ${i+1} of ${escapeHtml(p.name)}" class="detail-thumb${i===0?' active':''}" data-index="${i}">`).join('');
+  }
+
+  productDetailInner.innerHTML = `
+    <div class="detail-grid">
+      <div>
+        <img src="${photos.length ? photos[0] : p.thumbnail || ''}" alt="Main photo of ${escapeHtml(p.name)}" class="detail-main-img" id="detailMainImg">
+        <div class="detail-thumbs" aria-label="More photos">${thumbsHtml}</div>
+      </div>
+             <aside>
+         <h2 id="productDetailTitle">${escapeHtml(p.name)}</h2>
+         <p><strong>Category:</strong> ${escapeHtml(p.category)}${p.subcategory ? ` > ${escapeHtml(p.subcategory)}` : ''}</p>
+         <p><strong>Price:</strong> ₨${Number(p.price).toLocaleString()}</p>
+         
+         <div class="product-stats-detail">
+           <div class="stat-item-detail">
+             <span class="stat-icon">👁️</span>
+             <span class="stat-label">Views:</span>
+             <span class="stat-value">${p.views || 0}</span>
+           </div>
+           <div class="stat-item-detail">
+             <span class="stat-icon">👍</span>
+             <span class="stat-label">Likes:</span>
+             <span class="stat-value">${p.likes || 0}</span>
+           </div>
+           <div class="stat-item-detail">
+             <span class="stat-icon">👎</span>
+             <span class="stat-label">Dislikes:</span>
+             <span class="stat-value">${p.dislikes || 0}</span>
+           </div>
+         </div>
+         
+         <div class="product-reactions-detail">
+           <button class="reaction-btn-detail like-btn-detail ${getProductReaction(p.id).liked ? 'active' : ''}" 
+                   onclick="handleProductReaction('${p.id}', 'like')" 
+                   title="Like this product">
+             👍 Like
+           </button>
+           <button class="reaction-btn-detail dislike-btn-detail ${getProductReaction(p.id).disliked ? 'active' : ''}" 
+                   onclick="handleProductReaction('${p.id}', 'dislike')" 
+                   title="Dislike this product">
+             👎 Dislike
+           </button>
+         </div>
+         
+         <p><strong>Description:</strong><br>${escapeHtml(p.description).replace(/\n/g,'<br>')}</p>
+         <div class="seller-card" aria-label="Seller information">
+           <p><strong>Seller Contact:</strong><br>${escapeHtml(p.contactNo || '(Not provided)')}</p>
+           <p><strong>Seller Email:</strong><br><a href="mailto:${encodeURIComponent(p.sellerEmail)}">${escapeHtml(p.sellerEmail)}</a></p>
+         </div>
+       </aside>
+    </div>
+  `;
+
+  /* thumbs click to swap main image */
+  const mainImg = document.getElementById('detailMainImg');
+  const thumbs = productDetailInner.querySelectorAll('.detail-thumb');
+  thumbs.forEach(t=>{
+    t.addEventListener('click', ()=>{
+      const idx = Number(t.getAttribute('data-index'));
+      mainImg.src = photos[idx];
+      thumbs.forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+    });
+  });
+
+  openModal(modalProductDetail);
+}
+
+/* -------------------------
+   Category icons
+   ------------------------- */
+function getCategoryIcon(category){
+  switch(category.toLowerCase()){
+    case 'electronics': return '🔌';
+    case 'furniture': return '🛋️';
+    case 'clothing': return '👚';
+    case 'vehicles': return '🚗';
+    case 'books': return '📚';
+    default: return '🛒';
+  }
+}
+
+/* -------------------------
+   Add Product Modal handlers
+   ------------------------- */
+let editProductId = null; // null means add mode, otherwise edit mode
+
+addProductBtn.addEventListener('click', ()=>{
+  if (!currentUser){
+    alert('Please login first to add products.');
+    openModal(modalLogin);
+    return;
+  }
+  editProductId = null;
+  uploadForm.reset();
+  thumbPreview.innerHTML = '';
+  photosPreview.innerHTML = '';
+  sellerEmailInput.value = currentUser.email;
+  sellerEmailInput.readOnly = true;
+  document.getElementById('addProductTitle').textContent = 'Sell Your Product';
+  openModal(modalAddProduct);
+});
+
+/* Category change handler - populate subcategories */
+categorySelect.addEventListener('change', e => {
+  const selectedCategory = e.target.value;
+  subcategorySelect.innerHTML = '<option value="" disabled selected>Select subcategory</option>';
+  
+  if (selectedCategory && categories[selectedCategory]) {
+    categories[selectedCategory].forEach(subCat => {
+      const option = document.createElement('option');
+      option.value = subCat;
+      option.textContent = subCat;
+      subcategorySelect.appendChild(option);
+    });
+  } else {
+    subcategorySelect.innerHTML = '<option value="" disabled selected>Select subcategory</option><option value="">No subcategory</option>';
+  }
+});
+
+/* thumbnail preview */
+thumbnailInput.addEventListener('change', e=>{
+  thumbPreview.innerHTML = '';
+  const file = e.target.files[0];
+  if (file){
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.className = 'img-preview';
+      img.alt = 'Thumbnail preview';
+      thumbPreview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  }
+});
+/* multiple photos preview */
+photosInput.addEventListener('change', e=>{
+  photosPreview.innerHTML = '';
+  const files = Array.from(e.target.files);
+  files.forEach(f=>{
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.className = 'img-preview';
+      img.alt = 'Photo preview';
+      photosPreview.appendChild(img);
+    };
+    reader.readAsDataURL(f);
+  });
+});
+
+/* Handle Add/Edit Product form submission */
+uploadForm.addEventListener('submit', e=>{
+  e.preventDefault();
+
+  if (!currentUser){
+    alert('Please login first.');
+    closeModal(modalAddProduct);
+    return;
+  }
+
+  /* gather form data */
+  const name = e.target.productName.value.trim();
+  const category = e.target.category.value;
+  const subcategory = e.target.subcategory.value;
+  const price = Number(e.target.price.value);
+  const contactNo = e.target.contactNo.value.trim();
+  const sellerEmail = e.target.sellerEmail.value.trim();
+  const description = e.target.description.value.trim();
+
+  /* Process images asynchronously */
+  const processImages = () => {
+    return new Promise((resolve) => {
+      let thumbnailURL = '';
+      let photosURLs = [];
+      let processedCount = 0;
+      const totalImages = (thumbnailInput.files[0] ? 1 : 0) + photosInput.files.length;
+      
+      if (totalImages === 0) {
+        resolve({ thumbnailURL, photosURLs });
+        return;
+      }
+
+      const checkComplete = () => {
+        processedCount++;
+        if (processedCount === totalImages) {
+          resolve({ thumbnailURL, photosURLs });
+        }
+      };
+
+      /* Process thumbnail */
+      if (thumbnailInput.files[0]){
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          thumbnailURL = e.target.result;
+          checkComplete();
+        };
+        reader.readAsDataURL(thumbnailInput.files[0]);
+      }
+
+      /* Process photos */
+      for(let i=0; i < photosInput.files.length; i++){
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          photosURLs.push(e.target.result);
+          checkComplete();
+        };
+        reader.readAsDataURL(photosInput.files[i]);
+      }
+    });
+  };
+
+  /* Process images then handle form submission */
+  processImages().then(({ thumbnailURL, photosURLs }) => {
+    if(editProductId){
+      // Edit mode
+      const prodIndex = products.findIndex(p => p.id === editProductId && p.ownerEmail === currentUser.email);
+      if(prodIndex === -1){
+        alert('Product not found or you do not have permission to edit.');
+        closeModal(modalAddProduct);
+        return;
+      }
+      const existingProduct = products[prodIndex];
+      existingProduct.name = name;
+      existingProduct.category = category;
+      existingProduct.subcategory = subcategory;
+      existingProduct.price = price;
+      existingProduct.contactNo = contactNo;
+      existingProduct.description = description;
+      if(thumbnailURL) existingProduct.thumbnail = thumbnailURL;
+      if(photosURLs.length) existingProduct.photos = photosURLs;
+      existingProduct.lastUpdated = new Date().toISOString();
+      saveToStorage();
+      renderProducts();
+      showToast('Product updated successfully!', 'success');
+      editProductId = null;
+    } else {
+      // Add mode
+      const product = {
+        id: genId(),
+        name,
+        category,
+        subcategory,
+        price,
+        contactNo,
+        sellerEmail,
+        description,
+        thumbnail: thumbnailURL,
+        photos: photosURLs,
+        ownerEmail: currentUser.email,
+        status: 'Available',
+        createdDate: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        views: 0,
+        likes: 0,
+        dislikes: 0
+      };
+      products.push(product);
+      saveToStorage();
+      renderProducts();
+      showToast('Product added successfully!', 'success');
+    }
+
+    closeModal(modalAddProduct);
+  });
+});
+
+
+
+/* -------------------------
+   Login & Signup handlers
+   ------------------------- */
+loginBtn.addEventListener('click', ()=> {
+  loginForm.reset();
+  openModal(modalLogin);
+});
+signupBtn.addEventListener('click', ()=>{
+  signupForm.reset();
+  signupProfilePreview.innerHTML = '';
+  openModal(modalSignup);
+});
+
+/* Signup Profile picture preview */
+signupProfilePicInput.addEventListener('change', e=>{
+  signupProfilePreview.innerHTML = '';
+  const file = e.target.files[0];
+  if (file){
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.className = 'img-preview';
+      img.alt = 'Profile picture preview';
+      signupProfilePreview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+/* Login */
+loginForm.addEventListener('submit', e=>{
+  e.preventDefault();
+  const email = e.target.loginEmail.value.trim().toLowerCase();
+  const password = e.target.loginPassword.value;
+
+  const user = users.find(u=>u.email === email && u.password === password);
+  if (user){
+    currentUser = user;
+    updateLoginUI();
+    showToast(`Welcome back, ${user.name}!`, 'success');
+    closeModal(modalLogin);
+  } else {
+    showToast('Invalid email or password.', 'error');
+  }
+});
+
+/* Signup */
+signupForm.addEventListener('submit', e=>{
+  e.preventDefault();
+  const name = e.target.signupName.value.trim();
+  const email = e.target.signupEmail.value.trim().toLowerCase();
+  const password = e.target.signupPassword.value;
+
+  if(users.find(u=>u.email===email)){
+    alert('Email already registered. Please login.');
+    closeModal(modalSignup);
+    openModal(modalLogin);
+    return;
+  }
+
+  /* Process profile picture asynchronously */
+  const processProfilePic = () => {
+    return new Promise((resolve) => {
+      if(signupProfilePicInput.files[0]){
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          resolve(e.target.result);
+        };
+        reader.readAsDataURL(signupProfilePicInput.files[0]);
+      } else {
+        resolve('');
+      }
+    });
+  };
+
+  /* Process profile picture then handle signup */
+  processProfilePic().then(profilePicUrl => {
+    users.push({
+      name,
+      email,
+      password,
+      profilePicUrl,
+      phone: '',
+      rating: 0,
+      joinDate: new Date().toISOString()
+    });
+    currentUser = users[users.length-1];
+    saveToStorage();
+    updateLoginUI();
+    showToast(`Thank you for signing up, ${name}!`, 'success');
+    closeModal(modalSignup);
+  });
+});
+
+/* Logout */
+logoutBtn.addEventListener('click', ()=> {
+  if(confirm('Are you sure you want to logout?')){
+    currentUser = null;
+    saveToStorage(); // This will clear the currentUser from localStorage
+    updateLoginUI();
+  }
+});
+
+/* update login/logout UI states */
+function updateLoginUI(){
+  if(currentUser){
+    loggedInUserDiv.style.display = 'flex';
+    userNameDisplay.textContent = currentUser.name;
+    loginBtn.style.display = 'none';
+    signupBtn.style.display = 'none';
+    addProductBtn.style.display = 'inline-block';
+
+    if(currentUser.profilePicUrl){
+      profilePicImg.src = currentUser.profilePicUrl;
+      profilePicImg.style.display = 'inline-block';
+      userIconSpan.style.display = 'none';
+    } else {
+      profilePicImg.style.display = 'none';
+      userIconSpan.style.display = 'inline-block';
+    }
+  } else {
+    loggedInUserDiv.style.display = 'none';
+    userNameDisplay.textContent = '';
+    loginBtn.style.display = 'inline-block';
+    signupBtn.style.display = 'inline-block';
+    addProductBtn.style.display = 'inline-block';
+
+    profilePicImg.style.display = 'none';
+    userIconSpan.style.display = 'inline-block';
+  }
+}
+
+/* -------------------------
+   Enhanced Search & Filtering
+   ------------------------- */
+let currentFilters = {
+  category: '',
+  minPrice: 0,
+  maxPrice: Infinity,
+  searchQuery: ''
+};
+
+function advancedSearch() {
+  let filtered = products.filter(p => {
+    const matchesQuery = !currentFilters.searchQuery || 
+                        p.name.toLowerCase().includes(currentFilters.searchQuery.toLowerCase()) ||
+                        p.description.toLowerCase().includes(currentFilters.searchQuery.toLowerCase());
+    const matchesPrice = p.price >= currentFilters.minPrice && 
+                        (currentFilters.maxPrice === Infinity || p.price <= currentFilters.maxPrice);
+    const matchesCategory = !currentFilters.category || p.category === currentFilters.category;
+    const matchesStatus = p.status !== 'Sold';
+    
+    return matchesQuery && matchesPrice && matchesCategory && matchesStatus;
+  });
+  
+  // Apply sorting
+  const sortBy = document.getElementById('sortSelect').value;
+  filtered.sort((a, b) => {
+    switch(sortBy) {
+      case 'views':
+        return (b.views || 0) - (a.views || 0);
+      case 'likes':
+        return (b.likes || 0) - (a.likes || 0);
+      case 'popularity':
+        const scoreA = ((b.likes || 0) * 2) + (b.views || 0) - (b.dislikes || 0);
+        const scoreB = ((a.likes || 0) * 2) + (a.views || 0) - (a.dislikes || 0);
+        return scoreB - scoreA;
+      case 'date':
+      default:
+        return new Date(b.createdDate || 0) - new Date(a.createdDate || 0);
+    }
+  });
+  
+  return filtered;
+}
+
+searchInput.addEventListener('input', e=>{
+  const val = e.target.value.toLowerCase();
+  currentFilters.searchQuery = val;
+  autocompleteList.innerHTML = '';
+  
+  if (!val) {
+    renderProducts();
+    return;
+  }
+
+  // Show category matches
+  const categoryMatches = Object.keys(categories).filter(cat => 
+    cat.toLowerCase().startsWith(val)
+  );
+  
+  // Show subcategory matches
+  const subcategoryMatches = [];
+  Object.entries(categories).forEach(([mainCat, subCats]) => {
+    subCats.forEach(subCat => {
+      if (subCat.toLowerCase().includes(val)) {
+        subcategoryMatches.push(`${mainCat} > ${subCat}`);
+      }
+    });
+  });
+
+  const allMatches = [...categoryMatches, ...subcategoryMatches];
+  allMatches.forEach(match => {
+    const div = document.createElement('div');
+    div.textContent = match;
+    div.addEventListener('click', ()=> {
+      if (match.includes(' > ')) {
+        const [mainCat, subCat] = match.split(' > ');
+        currentFilters.category = mainCat;
+        searchInput.value = match;
+      } else {
+        currentFilters.category = match;
+        searchInput.value = match;
+      }
+      autocompleteList.innerHTML = '';
+      renderProducts();
+    });
+    autocompleteList.appendChild(div);
+  });
+});
+
+/* Search on Enter or on losing focus */
+searchInput.addEventListener('keydown', e=>{
+  if (e.key === 'Enter'){
+    autocompleteList.innerHTML = '';
+    renderProducts();
+  }
+});
+searchInput.addEventListener('blur', ()=>{
+  setTimeout(()=> autocompleteList.innerHTML = '', 150);
+});
+
+/* Sort products when sort option changes */
+document.getElementById('sortSelect').addEventListener('change', () => {
+  renderProducts();
+});
+
+/* Favorites functionality */
+function toggleFavorite(productId) {
+  if (!currentUser) {
+    showToast('Please login to save favorites', 'warning');
+    return;
+  }
+  
+  if (!favorites.has(currentUser.email)) {
+    favorites.set(currentUser.email, new Set());
+  }
+  
+  const userFavorites = favorites.get(currentUser.email);
+  if (userFavorites.has(productId)) {
+    userFavorites.delete(productId);
+    showToast('Removed from favorites', 'info');
+  } else {
+    userFavorites.add(productId);
+    showToast('Added to favorites', 'success');
+  }
+  
+  saveToStorage();
+  renderProducts(); // Refresh to update heart icons
+}
+
+function getFavoritesCount(userId) {
+  return favorites.get(userId)?.size || 0;
+}
+
+/* Views, Likes & Dislikes System */
+function incrementViews(productId) {
+  if (!currentUser) return; // Only track views for logged-in users
+  
+  const product = products.find(p => p.id === productId);
+  if (!product) return;
+  
+  const userId = currentUser.email;
+  if (!productInteractions.has(userId)) {
+    productInteractions.set(userId, new Map());
+  }
+  
+  const userInteractions = productInteractions.get(userId);
+  const currentInteraction = userInteractions.get(productId) || { liked: false, disliked: false, viewed: false };
+  
+  // Only increment views if user hasn't viewed this product before
+  if (!currentInteraction.viewed) {
+    // Ensure product has views property initialized
+    if (typeof product.views !== 'number') {
+      product.views = 0;
+    }
+    product.views += 1;
+    currentInteraction.viewed = true;
+    userInteractions.set(productId, currentInteraction);
+    saveToStorage();
+  }
+}
+
+function handleProductReaction(productId, reaction) {
+  if (!currentUser) {
+    showToast('Please login to like/dislike products', 'warning');
+    return;
+  }
+
+  const userId = currentUser.email;
+  if (!productInteractions.has(userId)) {
+    productInteractions.set(userId, new Map());
+  }
+
+  const userInteractions = productInteractions.get(userId);
+  const currentInteraction = userInteractions.get(productId) || { liked: false, disliked: false, viewed: false };
+
+  const product = products.find(p => p.id === productId);
+  if (!product) return;
+
+  // Initialize counters if they don't exist
+  if (typeof product.likes !== 'number') product.likes = 0;
+  if (typeof product.dislikes !== 'number') product.dislikes = 0;
+  if (typeof product.views !== 'number') product.views = 0;
+
+  // Handle reaction logic
+  if (reaction === 'like') {
+    if (currentInteraction.liked) {
+      // Remove like
+      product.likes--;
+      currentInteraction.liked = false;
+      showToast('Like removed', 'info');
+    } else {
+      // Add like
+      product.likes++;
+      currentInteraction.liked = true;
+      // Remove dislike if it exists
+      if (currentInteraction.disliked) {
+        product.dislikes--;
+        currentInteraction.disliked = false;
+      }
+      showToast('Product liked!', 'success');
+    }
+  } else if (reaction === 'dislike') {
+    if (currentInteraction.disliked) {
+      // Remove dislike
+      product.dislikes--;
+      currentInteraction.disliked = false;
+      showToast('Dislike removed', 'info');
+    } else {
+      // Add dislike
+      product.dislikes++;
+      currentInteraction.disliked = true;
+      // Remove like if it exists
+      if (currentInteraction.liked) {
+        product.likes--;
+        currentInteraction.liked = false;
+      }
+      showToast('Product disliked', 'info');
+    }
+  }
+
+  // Ensure the viewed property is set when user interacts with the product
+  if (!currentInteraction.viewed) {
+    currentInteraction.viewed = true;
+    product.views++;
+  }
+  
+  userInteractions.set(productId, currentInteraction);
+  saveToStorage();
+  renderProducts(); // Refresh to show updated counts
+}
+
+function getProductReaction(productId) {
+  if (!currentUser) return { liked: false, disliked: false, viewed: false };
+  const userId = currentUser.email;
+  const userInteractions = productInteractions.get(userId);
+  return userInteractions ? (userInteractions.get(productId) || { liked: false, disliked: false, viewed: false }) : { liked: false, disliked: false, viewed: false };
+}
+
+/* Clean up interaction data when products are deleted */
+function cleanupProductInteractions(productId) {
+  // Remove this product from all users' interaction records
+  productInteractions.forEach((userInteractions, userId) => {
+    if (userInteractions.has(productId)) {
+      userInteractions.delete(productId);
+    }
+  });
+  
+  // Also clean up favorites
+  favorites.forEach((userFavorites, userId) => {
+    if (userFavorites.has(productId)) {
+      userFavorites.delete(productId);
+    }
+  });
+}
+
+/* Get total interaction counts for a product (for debugging/verification) */
+function getProductInteractionCounts(productId) {
+  let totalViews = 0;
+  let totalLikes = 0;
+  let totalDislikes = 0;
+  
+  productInteractions.forEach((userInteractions, userId) => {
+    const interaction = userInteractions.get(productId);
+    if (interaction) {
+      if (interaction.viewed) totalViews++;
+      if (interaction.liked) totalLikes++;
+      if (interaction.disliked) totalDislikes++;
+    }
+  });
+  
+  return { totalViews, totalLikes, totalDislikes };
+}
+
+/* Validate and repair data integrity */
+function validateDataIntegrity() {
+  // Ensure all products have proper stats initialized
+  products.forEach(product => {
+    if (typeof product.views !== 'number') product.views = 0;
+    if (typeof product.likes !== 'number') product.likes = 0;
+    if (typeof product.dislikes !== 'number') product.dislikes = 0;
+  });
+  
+  // Clean up orphaned interaction data for deleted products
+  const existingProductIds = new Set(products.map(p => p.id));
+  productInteractions.forEach((userInteractions, userId) => {
+    userInteractions.forEach((interaction, productId) => {
+      if (!existingProductIds.has(productId)) {
+        userInteractions.delete(productId);
+      }
+    });
+  });
+  
+  // Clean up orphaned favorites for deleted products
+  favorites.forEach((userFavorites, userId) => {
+    userFavorites.forEach(productId => {
+      if (!existingProductIds.has(productId)) {
+        userFavorites.delete(productId);
+      }
+    });
+  });
+  
+  // Synchronize product stats with actual interaction data
+  products.forEach(product => {
+    const counts = getProductInteractionCounts(product.id);
+    // Only update if there's a significant discrepancy (more than 1)
+    if (Math.abs(product.views - counts.totalViews) > 1) {
+      product.views = counts.totalViews;
+    }
+    if (Math.abs(product.likes - counts.totalLikes) > 1) {
+      product.likes = counts.totalLikes;
+    }
+    if (Math.abs(product.dislikes - counts.totalDislikes) > 1) {
+      product.dislikes = counts.totalDislikes;
+    }
+  });
+  
+  // Validate current user session
+  validateUserSession();
+}
+
+/* Validate and clean up user session */
+function validateUserSession() {
+  if (currentUser) {
+    // Check if the current user still exists in our users array
+    const userExists = users.find(u => u.email === currentUser.email);
+    if (!userExists) {
+      // User was deleted, clear the session
+      currentUser = null;
+      localStorage.removeItem('startup_currentUser');
+      showToast('Your session has expired. Please login again.', 'warning');
+    } else {
+      // Update currentUser reference to the one from users array (in case of updates)
+      currentUser = userExists;
+    }
+  }
+}
+
+/* Check if user is currently logged in */
+function isLoggedIn() {
+  return currentUser !== null;
+}
+
+/* Get current user info safely */
+function getCurrentUser() {
+  return currentUser;
+}
+
+/* Clear all user sessions (admin function) */
+function clearAllSessions() {
+  currentUser = null;
+  localStorage.removeItem('startup_currentUser');
+  updateLoginUI();
+  showToast('All sessions cleared', 'info');
+}
+
+/* Force logout current user */
+function forceLogout() {
+  if (currentUser) {
+    const userName = currentUser.name;
+    currentUser = null;
+    saveToStorage();
+    updateLoginUI();
+    showToast(`You have been logged out, ${userName}`, 'info');
+  }
+}
+
+/* Reset a user's interaction with a specific product (for debugging/admin) */
+function resetUserProductInteraction(userId, productId) {
+  if (!productInteractions.has(userId)) return;
+  
+  const userInteractions = productInteractions.get(userId);
+  if (userInteractions.has(productId)) {
+    const interaction = userInteractions.get(productId);
+    const product = products.find(p => p.id === productId);
+    
+    if (product) {
+      // Decrement the product stats
+      if (interaction.viewed && product.views > 0) product.views--;
+      if (interaction.liked && product.likes > 0) product.likes--;
+      if (interaction.disliked && product.dislikes > 0) product.dislikes--;
+    }
+    
+    // Remove the interaction record
+    userInteractions.delete(productId);
+    saveToStorage();
+  }
+}
+
+/* Export interaction data for debugging (console.log) */
+function exportInteractionData() {
+  console.log('=== INTERACTION DATA EXPORT ===');
+  console.log('Product Interactions:', productInteractions);
+  console.log('Favorites:', favorites);
+  console.log('Products with stats:', products.map(p => ({
+    id: p.id,
+    name: p.name,
+    views: p.views,
+    likes: p.likes,
+    dislikes: p.dislikes
+  })));
+  console.log('Overall Stats:', getOverallInteractionStats());
+  console.log('=== END EXPORT ===');
+}
+
+/* Export session data for debugging */
+function exportSessionData() {
+  console.log('=== SESSION DATA EXPORT ===');
+  console.log('Current User:', currentUser);
+  console.log('Is Logged In:', isLoggedIn());
+  console.log('Total Users:', users.length);
+  console.log('Session Storage Key:', localStorage.getItem('startup_currentUser'));
+  console.log('=== END SESSION EXPORT ===');
+}
+
+/* Get interaction summary for a specific user */
+function getUserInteractionSummary(userId) {
+  if (!productInteractions.has(userId)) {
+    return { viewed: 0, liked: 0, disliked: 0, totalInteractions: 0 };
+  }
+  
+  const userInteractions = productInteractions.get(userId);
+  let viewed = 0, liked = 0, disliked = 0;
+  
+  userInteractions.forEach(interaction => {
+    if (interaction.viewed) viewed++;
+    if (interaction.liked) liked++;
+    if (interaction.disliked) disliked++;
+  });
+  
+  return {
+    viewed,
+    liked,
+    disliked,
+    totalInteractions: userInteractions.size
+  };
+}
+
+/* Get overall interaction statistics */
+function getOverallInteractionStats() {
+  const stats = {
+    totalUsers: productInteractions.size,
+    totalProducts: products.length,
+    totalViews: 0,
+    totalLikes: 0,
+    totalDislikes: 0,
+    mostViewedProduct: null,
+    mostLikedProduct: null,
+    mostDislikedProduct: null
+  };
+  
+  // Calculate totals
+  products.forEach(product => {
+    stats.totalViews += product.views || 0;
+    stats.totalLikes += product.likes || 0;
+    stats.totalDislikes += product.dislikes || 0;
+  });
+  
+  // Find most interacted products
+  if (products.length > 0) {
+    stats.mostViewedProduct = products.reduce((a, b) => (a.views || 0) > (b.views || 0) ? a : b);
+    stats.mostLikedProduct = products.reduce((a, b) => (a.likes || 0) > (b.likes || 0) ? a : b);
+    stats.mostDislikedProduct = products.reduce((a, b) => (a.dislikes || 0) > (b.dislikes || 0) ? a : b);
+  }
+  
+  return stats;
+}
+
+/* Reset all interactions for a specific product (admin function) */
+function resetProductInteractions(productId) {
+  const product = products.find(p => p.id === productId);
+  if (!product) return;
+  
+  // Reset product stats
+  product.views = 0;
+  product.likes = 0;
+  product.dislikes = 0;
+  
+  // Remove all user interactions for this product
+  productInteractions.forEach((userInteractions, userId) => {
+    if (userInteractions.has(productId)) {
+      userInteractions.delete(productId);
+    }
+  });
+  
+  // Remove from all favorites
+  favorites.forEach((userFavorites, userId) => {
+    if (userFavorites.has(productId)) {
+      userFavorites.delete(productId);
+    }
+  });
+  
+  saveToStorage();
+  renderProducts();
+}
+
+/* Get detailed interaction breakdown for a specific product */
+function getProductInteractionBreakdown(productId) {
+  const product = products.find(p => p.id === productId);
+  if (!product) return null;
+  
+  const breakdown = {
+    productId,
+    productName: product.name,
+    currentStats: {
+      views: product.views || 0,
+      likes: product.likes || 0,
+      dislikes: product.dislikes || 0
+    },
+    userInteractions: [],
+    totalInteractingUsers: 0
+  };
+  
+  productInteractions.forEach((userInteractions, userId) => {
+    const interaction = userInteractions.get(productId);
+    if (interaction) {
+      breakdown.userInteractions.push({
+        userId,
+        ...interaction
+      });
+      breakdown.totalInteractingUsers++;
+    }
+  });
+  
+  return breakdown;
+}
+
+/* -------------------------
+   Profile modal handlers
+   ------------------------- */
+// Open profile modal when clicking logged in user area
+loggedInUserDiv.addEventListener('click', () => {
+  if(!currentUser) return;
+
+  // Show profile info
+  profileNameInput.value = currentUser.name;
+  profileEmailInput.value = currentUser.email;
+  profilePhoneInput.value = currentUser.phone || '';
+  if(currentUser.profilePicUrl){
+    profilePicPreview.src = currentUser.profilePicUrl;
+  } else {
+    profilePicPreview.src = '';
+  }
+
+  // Clear previous products list and render user products
+  renderUserProducts();
+
+  openModal(modalProfile);
+});
+
+// Change profile picture preview on selection
+profilePicInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      profilePicPreview.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// Save profile changes (phone and profile pic)
+saveProfileBtn.addEventListener('click', () => {
+  if(!currentUser) return alert('Not logged in.');
+
+  const newPhone = profilePhoneInput.value.trim();
+  currentUser.phone = newPhone;
+
+  if(profilePicInput.files[0]){
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      currentUser.profilePicUrl = e.target.result;
+      saveToStorage();
+      updateLoginUI();
+      showToast('Profile updated successfully!', 'success');
+      closeModal(modalProfile);
+    };
+    reader.readAsDataURL(profilePicInput.files[0]);
+  } else {
+    saveToStorage();
+    updateLoginUI();
+    showToast('Profile updated successfully!', 'success');
+    closeModal(modalProfile);
+  }
+});
+
+/* Render user's own products in profile modal */
+function renderUserProducts(){
+  userProductsContainer.innerHTML = '';
+  const userProds = products.filter(p => p.ownerEmail === currentUser.email);
+  if(userProds.length === 0){
+    userProductsContainer.innerHTML = '<p>You have not listed any products yet.</p>';
+    return;
+  }
+
+  userProds.forEach(p => {
+    const prodDiv = document.createElement('div');
+    prodDiv.className = 'user-product-item';
+
+    prodDiv.innerHTML = `
+      <img src="${p.thumbnail || ''}" alt="Thumbnail of ${escapeHtml(p.name)}" class="user-product-thumb" />
+      <div class="user-product-info">
+        <p class="user-product-name">${escapeHtml(p.name)}</p>
+        <p class="user-product-category">${escapeHtml(p.category)}${p.subcategory ? ` > ${escapeHtml(p.subcategory)}` : ''}</p>
+      </div>
+      <div class="user-product-buttons">
+        <button class="btn-edit" aria-label="Edit product ${escapeHtml(p.name)}">Edit</button>
+        <button class="btn-delete" aria-label="Delete product ${escapeHtml(p.name)}">Delete</button>
+      </div>
+    `;
+
+    const editBtn = prodDiv.querySelector('.btn-edit');
+    const deleteBtn = prodDiv.querySelector('.btn-delete');
+
+    editBtn.addEventListener('click', () => {
+      openEditProductModal(p.id);
+    });
+    deleteBtn.addEventListener('click', () => {
+      if(confirm(`Are you sure you want to delete "${p.name}"? This action cannot be undone.`)){
+        const idx = products.findIndex(prod => prod.id === p.id);
+        if(idx !== -1){
+          // Clean up interaction data for this product
+          cleanupProductInteractions(p.id);
+          // Remove product
+          products.splice(idx, 1);
+          saveToStorage();
+          renderUserProducts();
+          renderProducts();
+        }
+      }
+    });
+
+    userProductsContainer.appendChild(prodDiv);
+  });
+}
+
+/* Open Add Product modal in Edit mode */
+function openEditProductModal(productId){
+  const product = products.find(p => p.id === productId && p.ownerEmail === currentUser.email);
+  if(!product){
+    alert('Product not found or you do not have permission to edit it.');
+    return;
+  }
+
+  editProductId = productId;
+
+  uploadForm.productName.value = product.name;
+  uploadForm.category.value = product.category;
+  
+  // Populate subcategories for the selected category
+  if (product.category && categories[product.category]) {
+    subcategorySelect.innerHTML = '<option value="" disabled>Select subcategory</option>';
+    categories[product.category].forEach(subCat => {
+      const option = document.createElement('option');
+      option.value = subCat;
+      option.textContent = subCat;
+      subcategorySelect.appendChild(option);
+    });
+    subcategorySelect.value = product.subcategory || '';
+  }
+  
+  uploadForm.price.value = product.price;
+  uploadForm.contactNo.value = product.contactNo || '';
+  sellerEmailInput.value = product.sellerEmail;
+  sellerEmailInput.readOnly = true;
+  uploadForm.description.value = product.description;
+
+  thumbPreview.innerHTML = '';
+  photosPreview.innerHTML = '';
+
+  if(product.thumbnail){
+    const img = document.createElement('img');
+    img.src = product.thumbnail;
+    img.className = 'img-preview';
+    img.alt = 'Thumbnail preview';
+    thumbPreview.appendChild(img);
+  }
+  if(product.photos && product.photos.length){
+    product.photos.forEach(url=>{
+      const img = document.createElement('img');
+      img.src = url;
+      img.className = 'img-preview';
+      img.alt = 'Photo preview';
+      photosPreview.appendChild(img);
+    });
+  }
+
+  document.getElementById('addProductTitle').textContent = 'Edit Product';
+  openModal(modalAddProduct);
+}
+
+/* -------------------------
+   Initial render and UI setup
+   ------------------------- */
+loadFromStorage(); // Load saved data from localStorage
+validateDataIntegrity(); // Ensure data integrity
+updateLoginUI();
+renderProducts();
+
+// Export interaction data for debugging (can be removed in production)
+// exportInteractionData();
+// exportSessionData();
+
+/* Close modal on clicking outside content */
+document.querySelectorAll('.modalOverlay').forEach(modal=>{
+  modal.addEventListener('click', e=>{
+    if(e.target === modal) closeModal(modal);
+  });
+});
+</script>
+
+</body>
+</html>
